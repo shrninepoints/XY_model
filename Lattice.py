@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
+import copy
+
 
 class Lattice:
     def __init__(self, N, filename=None):
@@ -10,6 +12,9 @@ class Lattice:
         self.vortices = np.array([[(np.cos(theta), np.sin(theta)) for theta in np.random.uniform(0, 2*np.pi, N)] for _ in range(N)])
         self.bonds_horizontal = np.full((N, N), True)
         self.bonds_vertical = np.full((N, N), True)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def get_vector(self, x, y):
         return self.vortices[x % self.N, y % self.N]
@@ -68,6 +73,23 @@ class Lattice:
                     cluster_sizes.append(dfs(i, j))
 
         return max(cluster_sizes) if cluster_sizes else 0
+
+    def rotate_all_vortices(self):
+        """
+        Rotate all vortices in the lattice by the same random angle.
+        """
+        # Generate a random angle between -pi and pi
+        alpha = np.random.uniform(-np.pi, np.pi)
+
+        # Calculate rotation matrix
+        rotation_matrix = np.array([[np.cos(alpha), -np.sin(alpha)],
+                                    [np.sin(alpha), np.cos(alpha)]])
+
+        # Apply rotation to all vortices
+        for i in range(self.N):
+            for j in range(self.N):
+                self.vortices[i, j] = np.dot(rotation_matrix, self.vortices[i, j])
+
 
     def visualize_lattice(self):
         fig, ax = plt.subplots(figsize=(10, 10))
