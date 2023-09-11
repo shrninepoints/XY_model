@@ -109,4 +109,5 @@ if __name__ == "__main__":
     sorted_K = sort_coupling_constants(K_horizontal, K_vertical)
     #print("Sorted K values with position and direction:", sorted_K)
     t_max_state = BondInsert(lattice)
-    print("State corresponding to the largest change in cluster size:", t_max_state)
+    print("State corresponding to the largest change in cluster size:", t_max_state)    
+    t_max_state['lattice_state'].visualize_lattice()
