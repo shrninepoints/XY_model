@@ -52,16 +52,13 @@ class Lattice:
             visited[x, y] = True
             size = 1
 
-            # Check right bond
+            # Check 4 connected bonds
             if self.get_horizontal_bond(x, y) and not visited[(x + 1) % self.N, y]:
                 size += dfs((x + 1) % self.N, y)
-            # Check left bond
             if self.get_horizontal_bond(x - 1, y) and not visited[x - 1, y]:
                 size += dfs(x - 1, y)
-            # Check down bond
             if self.get_vertical_bond(x, y) and not visited[x, (y + 1) % self.N]:
                 size += dfs(x, (y + 1) % self.N)
-            # Check up bond
             if self.get_vertical_bond(x, y - 1) and not visited[x, y - 1]:
                 size += dfs(x, y - 1)
 
@@ -107,11 +104,11 @@ class Lattice:
                 ax.add_artist(circle)
 
                 # Draw right bond
-                linewidth = 2 if self.bonds_horizontal[i, j] else 0.5
+                linewidth = 3 if self.bonds_horizontal[i, j] else 0.5
                 ax.plot([x, (x + 1) ], [y, y], color='black', linewidth=linewidth)
 
                 # Draw down bond
-                linewidth = 2 if self.bonds_vertical[i, j] else 0.5
+                linewidth = 3 if self.bonds_vertical[i, j] else 0.5
                 ax.plot([x, x], [y, (y + 1) ], color='black', linewidth=linewidth)
 
         ax.set_xlim(-1, self.N)
