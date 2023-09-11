@@ -19,6 +19,9 @@ def hamiltonian(lattice, J = 1):
 
     return H
 
+
+
+
 # Example usage:
 lattice = Lattice(10)
 print(hamiltonian(lattice))
