@@ -154,9 +154,10 @@ def plot(all_results):
 
 
 if __name__ == "__main__":
-    iterations = 6  
-    system_size = 60
+    iterations = 40  
+    system_size = 40
     all_results = Simulation(iterations, system_size)
+    print("iterations = ", iterations, "system_size = ", system_size)
     print(all_results[-1])
     plot(all_results)
     pass

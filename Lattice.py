@@ -46,30 +46,35 @@ class Lattice:
         visited = np.zeros((self.N, self.N), dtype=bool)
         cluster_sizes = []
 
-        def dfs(x, y):
-            if x < 0 or x >= self.N or y < 0 or y >= self.N or visited[x, y]:
-                return 0
-            visited[x, y] = True
-            size = 1
+        def dfs_iterative(x, y):
+            stack = [(x, y)]
+            size = 0
 
-            # Check 4 connected bonds
-            if self.get_horizontal_bond(x, y) and not visited[(x + 1) % self.N, y]:
-                size += dfs((x + 1) % self.N, y)
-            if self.get_horizontal_bond(x - 1, y) and not visited[x - 1, y]:
-                size += dfs(x - 1, y)
-            if self.get_vertical_bond(x, y) and not visited[x, (y + 1) % self.N]:
-                size += dfs(x, (y + 1) % self.N)
-            if self.get_vertical_bond(x, y - 1) and not visited[x, y - 1]:
-                size += dfs(x, y - 1)
+            while stack:
+                x, y = stack.pop()
+                if 0 <= x < self.N and 0 <= y < self.N and not visited[x, y]:
+                    visited[x, y] = True
+                    size += 1
+
+                    # Check 4 connected bonds
+                    if self.get_horizontal_bond(x, y) and not visited[(x + 1) % self.N, y]:
+                        stack.append(((x + 1) % self.N, y))
+                    if self.get_horizontal_bond(x - 1, y) and not visited[x - 1, y]:
+                        stack.append((x - 1, y))
+                    if self.get_vertical_bond(x, y) and not visited[x, (y + 1) % self.N]:
+                        stack.append((x, (y + 1) % self.N))
+                    if self.get_vertical_bond(x, y - 1) and not visited[x, y - 1]:
+                        stack.append((x, y - 1))
 
             return size
 
         for i in range(self.N):
             for j in range(self.N):
                 if not visited[i, j]:
-                    cluster_sizes.append(dfs(i, j))
+                    cluster_sizes.append(dfs_iterative(i, j))
 
         return max(cluster_sizes) if cluster_sizes else 0
+
 
     def find_all_clusters(self):
         #Find all clusters in the lattice
