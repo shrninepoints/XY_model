@@ -99,6 +99,9 @@ def BondInsert(lattice):
     # Return the K value corresponding to that step
     return largest_change
 
+
+
+
 if __name__ == "__main__":
     lattice = Lattice(10)
     #print(hamiltonian(lattice))

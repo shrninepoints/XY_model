@@ -71,10 +71,44 @@ class Lattice:
 
         return max(cluster_sizes) if cluster_sizes else 0
 
+    def find_all_clusters(self):
+        #Find all clusters in the lattice
+        visited = np.zeros((self.N, self.N), dtype=bool)
+        clusters = []
+
+        def dfs(i, j, current_cluster):
+            if visited[i, j]:
+                return
+            visited[i, j] = True
+            current_cluster.append((i, j))
+
+            # Check neighbors
+            neighbors = [(i+1, j), (i-1, j), (i, j+1), (i, j-1)]
+            for x, y in neighbors:
+                # Apply periodic boundary conditions
+                x %= self.N
+                y %= self.N
+
+                # If the bond exists and the site hasn't been visited, continue the DFS
+                if ((x == (i+1)%self.N and self.get_horizontal_bond(i, j)) or
+                    (x == (i-1)%self.N and self.get_horizontal_bond(x, y)) or
+                    (y == (j+1)%self.N and self.get_vertical_bond(i, j)) or
+                    (y == (j-1)%self.N and self.get_vertical_bond(x, y))):
+                    dfs(x, y, current_cluster)
+
+        # Iterate over all sites and start a DFS if the site hasn't been visited
+        for i in range(self.N):
+            for j in range(self.N):
+                if not visited[i, j]:
+                    current_cluster = []
+                    dfs(i, j, current_cluster)
+                    if current_cluster:
+                        clusters.append(current_cluster)
+
+        return clusters
+
     def rotate_all_vortices(self):
-        """
-        Rotate all vortices in the lattice by the same random angle.
-        """
+        #Rotate all vortices in the lattice by the same random angle.
         # Generate a random angle between -pi and pi
         alpha = np.random.uniform(-np.pi, np.pi)
 
@@ -86,8 +120,7 @@ class Lattice:
         for i in range(self.N):
             for j in range(self.N):
                 self.vortices[i, j] = np.dot(rotation_matrix, self.vortices[i, j])
-
-
+                            
     def visualize_lattice(self):
         fig, ax = plt.subplots(figsize=(10, 10))
         cmap = plt.get_cmap('hsv')  # Color map for angles
