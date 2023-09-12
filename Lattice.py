@@ -62,16 +62,17 @@ class Lattice:
 
     def union(self, x1, y1, x2, y2):
         """Merge the sets containing nodes (x1, y1) and (x2, y2)."""
-        root1 = self.find(x1, y1)
-        root2 = self.find(x2, y2)
-        if not np.array_equal(root1, root2):
-            if self.size[root1[0],root1[1]] < self.size[root2[0],root2[1]]: 
-                # TODO: Reversing the order of following two sentence causes error in self.size, I can't see why               
-                self.size[root2[0],root2[1]] += self.size[root1[0],root1[1]]
-                self.parent[root1[0],root1[1]] = root2
+        root1x, root1y = self.find(x1, y1)
+        root2x, root2y = self.find(x2, y2)
+        if not ((root1x == root2x) and (root1y == root2y)):
+            if self.size[root1x,root1y] < self.size[root2x,root2y]: 
+                self.size[root2x,root2y] += self.size[root1x,root1y]
+                self.parent[root1x,root1y] = (root2x, root2y)
             else:
-                self.size[root1[0],root1[1]] += self.size[root2[0],root2[1]]
-                self.parent[root2[0],root2[1]] = root1           
+                self.size[root1x,root1y] += self.size[root2x,root2y]    
+                self.parent[root2x,root2y] = (root1x, root1y)          
+                
+                
 
     def find_all_clusters(self):
         """Find all clusters in the lattice using the Disjoint Set."""
