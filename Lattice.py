@@ -9,8 +9,8 @@ class Lattice:
     def __init__(self, N):
         self.N = N
         self.vortices = np.array([[(np.cos(theta), np.sin(theta)) for theta in np.random.uniform(0, 2*np.pi, N)] for _ in range(N)])
-        #bonds_horizontal[i.j] is between point (i,j) and (i,j+1)
-        #bonds_vertical[i.j] is between point (i,j) and (i+1,j)
+        #bonds_horizontal[i.j] is between point (i,j) and (i+1,j)
+        #bonds_vertical[i.j] is between point (i,j) and (i,j+1)
         self.bonds_horizontal = np.full((N, N), False)
         self.bonds_vertical = np.full((N, N), False)
         
@@ -36,12 +36,13 @@ class Lattice:
     def set_horizontal_bond(self, x, y, value):
         self.bonds_horizontal[x % self.N, y % self.N] = value
         if value:  # If the bond is set to True, merge the sets
-            self.union(x, y, x, (y+1) % self.N)
-    
+            self.union(x, y, (x+1) % self.N, y)
+
     def set_vertical_bond(self, x, y, value):
         self.bonds_vertical[x % self.N, y % self.N] = value
         if value:  # If the bond is set to True, merge the sets
-            self.union(x, y, (x+1) % self.N, y)
+            self.union(x, y, x, (y+1) % self.N)
+            
         
     def set_all_bonds(self, value):
         self.bonds_horizontal.fill(value)
@@ -52,10 +53,10 @@ class Lattice:
             self.bonds_vertical = np.random.choice([True, False], (self.N, self.N))
 
     def find(self, x, y):
-        """Find the representative element of the set containing node (x, y)."""
+        """Find the root node of the set containing node (x, y)."""
         parent_x, parent_y = self.parent[x, y]
         if (x, y) != (parent_x, parent_y):
-            # Path compression
+            # TODO:Path compression
             self.parent[x, y] = self.find(parent_x, parent_y)
         return self.parent[x, y]
 
@@ -63,14 +64,14 @@ class Lattice:
         """Merge the sets containing nodes (x1, y1) and (x2, y2)."""
         root1 = self.find(x1, y1)
         root2 = self.find(x2, y2)
-
-        if root1.all() != root2.all():
-            if self.size[root1[0],root1[1]] < self.size[root2[0],root2[1]]:
-                self.parent[root1[0],root1[1]] = root2
+        if not np.array_equal(root1, root2):
+            if self.size[root1[0],root1[1]] < self.size[root2[0],root2[1]]: 
+                # TODO: Reversing the order of following two sentence causes error in self.size, I can't see why               
                 self.size[root2[0],root2[1]] += self.size[root1[0],root1[1]]
+                self.parent[root1[0],root1[1]] = root2
             else:
-                self.parent[root2[0],root2[1]] = root1
                 self.size[root1[0],root1[1]] += self.size[root2[0],root2[1]]
+                self.parent[root2[0],root2[1]] = root1           
 
     def find_all_clusters(self):
         """Find all clusters in the lattice using the Disjoint Set."""
@@ -82,9 +83,15 @@ class Lattice:
         return list(clusters.values())
 
     def find_largest_cluster(self):
-        """Find the size of the largest cluster using the Disjoint Set."""
-        clusters = self.find_all_clusters()
-        return max(len(cluster) for cluster in clusters) if clusters else 0
+        largest_cluster_size = 0
+
+        for i in range(self.N):
+            for j in range(self.N):
+                root = self.find(i, j)
+                cluster_size = self.size[root[0],root[1]]
+                largest_cluster_size = max(largest_cluster_size, cluster_size)
+
+        return largest_cluster_size
 
     def rotate_all_vortices(self):
         #Rotate all vortices in the lattice by the same random angle.
@@ -223,15 +230,18 @@ class Lattice:
 
 if __name__ == '__main__':
     lattice = Lattice(10)
-    lattice.load_from_txt("./temp.txt")
 
     lattice.set_all_bonds(False)
     lattice.set_vertical_bond(5,5,True)
+    lattice.save_to_txt("./temp0.txt")
+    
     lattice.set_vertical_bond(5,6,True)
-    lattice.set_horizontal_bond(5,5,True)
-    lattice.set_horizontal_bond(3,4,True)
+    lattice.save_to_txt("./temp1.txt")
+    
+    lattice.set_vertical_bond(5,5,True)
+    lattice.save_to_txt("./temp2.txt")
 
-    print(lattice.find_largest_cluster())
+    #print(lattice.find_largest_cluster())
 
     lattice.save_to_txt("./temp.txt")
-    lattice.visualize_lattice()
+    #lattice.visualize_lattice()

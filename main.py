@@ -94,7 +94,7 @@ def BondInsert(lattice):
             'largest_cluster_size': largest_cluster_size,
             'lattice_state': lattice.copy()  # Assuming there's a copy method in the Lattice class
         })
-        
+        #lattice.save_to_txt("./temp/temp"+str(index)+".txt")
         index += 1
 
     # Find the step with the largest change in cluster size
@@ -153,10 +153,11 @@ def plot(all_results):
 
 if __name__ == "__main__":
     iterations = 10  
-    system_size = 10
+    system_size = 40
     all_results = Simulation(iterations, system_size)
     print("iterations = ", iterations, "system_size = ", system_size)
     print(all_results[-1])
     all_results[-1]['lattice_state'].save_to_txt("./temp.txt")
+    all_results[-1]['lattice_state'].visualize_lattice()
     plot(all_results)
     pass
