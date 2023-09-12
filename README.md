@@ -8,3 +8,4 @@ The Lattice class characterize an XY model on square N*N lattice. The `vortices`
 ###main.py
 
 This file reflect the BondInsertion section of the note. The current `__main__` code test the program with a randomly initialized lattice. The printed values are the size of largest cluster in each step, and the state of the lattice at t_max. The SpinReset part haven't been implemented yet.
+

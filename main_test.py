@@ -1,7 +1,6 @@
 from Lattice import Lattice
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 
 def hamiltonian(lattice, J = 1):
     H = 0.0
@@ -74,6 +73,8 @@ def BondInsert(lattice):
     results = []
     index = 0
     
+    '''
+    
     # Iterate over the sorted bonds and insert them
     for K_value, (i, j), direction in sorted_bonds:
         # Insert the bond
@@ -81,14 +82,28 @@ def BondInsert(lattice):
             lattice.set_horizontal_bond(i, j, True)
         else:
             lattice.set_vertical_bond(i, j, True)
-                             
+                      
+
+    '''
+    # Testing code. Insert bond randomly, largest change should be around half filling
+    # Correct.
+    for _ in range(lattice.N ** 2):
+        i = np.random.randint(0, lattice.N)
+        j = np.random.randint(0, lattice.N)
+        direction = np.random.choice(["horizontal", "vertical"])
+        if direction == 'horizontal':
+            lattice.set_horizontal_bond(i, j, True)
+        else:
+            lattice.set_vertical_bond(i, j, True)
+            
+            
         # Calculate the size of the largest cluster
         largest_cluster_size = lattice.find_largest_cluster()
 
         # Record the current state and results
         results.append({
             'index':index,
-            'K_value': K_value,
+            #'K_value': K_value,
             'bond_position': (i, j),
             'direction': direction,
             'largest_cluster_size': largest_cluster_size,
@@ -99,14 +114,17 @@ def BondInsert(lattice):
 
     # Find the step with the largest change in cluster size
     largest_change = max(results[1:], key=lambda x: x['largest_cluster_size'] - results[results.index(x) - 1]['largest_cluster_size'])
-
+    for result in results:
+        print(result['largest_cluster_size'])
+    # Return the K value corresponding to that step
     return largest_change
 
-def SpinReset(lattice):
+def SpinReset(lattice, all_states):
 
     # 1. Save the current state
+    all_states.append(lattice.copy())  # Assuming there's a copy method in the Lattice class
 
-    # 1. Get all clusters
+    # Get all clusters
     clusters = lattice.find_all_clusters()
 
     # 2. For each cluster, generate a random number and decide whether to flip the x-component
@@ -119,44 +137,37 @@ def SpinReset(lattice):
     # 3. Return the new state
     return lattice
 
-def Simulation(iterations, system_size):
+def Simulation(iterations):
 
     # Initialize a random Lattice
-    lattice = Lattice(system_size)  # Assuming a size of 10x10 for the lattice, but this can be changed
+    lattice = Lattice(10)  # Assuming a size of 10x10 for the lattice, but this can be changed
 
     # List to save the states of the lattice
-    all_results = []
+    all_states = []
 
     for _ in range(iterations):
-        
         # Apply BondInsertion step
-        t_max_state = BondInsert(lattice)
+        t_max_state = BondInsertion(lattice)
 
         # Apply SpinReset step
-        lattice = SpinReset(t_max_state['lattice_state'])
-        
-        all_results.append(t_max_state.copy())
+        new_state = SpinReset(t_max_state, all_states)
 
-    return all_results
+        # Update the lattice for the next iteration
+        lattice = new_state
 
-def plot(all_results):
-    # Extract K values from each t_max_state
-    K_values = [state['K_value'] for state in all_results]
-    print(K_values)
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    plt.plot(K_values, marker='o', linestyle='-')
-    plt.xlabel('Iteration')
-    plt.ylabel('K Value')
-    plt.title('K Values for Each Iteration')
-    plt.grid(True)
-    plt.show()
+    return all_states
+
 
 
 if __name__ == "__main__":
-    iterations = 6  
-    system_size = 60
-    all_results = Simulation(iterations, system_size)
-    print(all_results[-1])
-    plot(all_results)
-    pass
+    lattice = Lattice(30)
+    #print(hamiltonian(lattice))
+    K_horizontal, K_vertical = calculate_coupling_constants(lattice)
+    #print("K_horizontal:\n", K_horizontal)
+    #print("K_vertical:\n", K_vertical)
+
+    sorted_K = sort_coupling_constants(K_horizontal, K_vertical)
+    #print("Sorted K values with position and direction:", sorted_K)
+    t_max_state = BondInsert(lattice)
+    print("State corresponding to the largest change in cluster size:", t_max_state)    
+    #t_max_state['lattice_state'].visualize_lattice()
