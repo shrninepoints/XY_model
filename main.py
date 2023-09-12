@@ -59,8 +59,8 @@ def sort_coupling_constants(K_horizontal, K_vertical, epsilon=1e-9):
     return sorted_K
 
 def BondInsert(lattice):
-    # a. Clear all bonds
-    lattice.set_all_bonds(False)
+    # a. Clear all bonds and reset parent/size
+    lattice.reset_lattice()
     
     # b. Rotate all vortices for a random angle
     lattice.rotate_all_vortices()
@@ -115,8 +115,6 @@ def SpinReset(lattice):
         if flip:
             for i, j in cluster:
                 lattice.vortices[i, j, 0] = -lattice.vortices[i, j, 0]
-
-    # 3. Return the new state
     return lattice
 
 def Simulation(iterations, system_size):
@@ -154,10 +152,11 @@ def plot(all_results):
 
 
 if __name__ == "__main__":
-    iterations = 40  
-    system_size = 40
+    iterations = 10  
+    system_size = 10
     all_results = Simulation(iterations, system_size)
     print("iterations = ", iterations, "system_size = ", system_size)
     print(all_results[-1])
+    all_results[-1]['lattice_state'].save_to_txt("./temp.txt")
     plot(all_results)
     pass

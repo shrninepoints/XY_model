@@ -2,16 +2,21 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
 import copy
+from collections import defaultdict
 
 
 class Lattice:
-    def __init__(self, N, filename=None):
+    def __init__(self, N):
         self.N = N
+        self.vortices = np.array([[(np.cos(theta), np.sin(theta)) for theta in np.random.uniform(0, 2*np.pi, N)] for _ in range(N)])
         #bonds_horizontal[i.j] is between point (i,j) and (i,j+1)
         #bonds_vertical[i.j] is between point (i,j) and (i+1,j)
-        self.vortices = np.array([[(np.cos(theta), np.sin(theta)) for theta in np.random.uniform(0, 2*np.pi, N)] for _ in range(N)])
-        self.bonds_horizontal = np.full((N, N), True)
-        self.bonds_vertical = np.full((N, N), True)
+        self.bonds_horizontal = np.full((N, N), False)
+        self.bonds_vertical = np.full((N, N), False)
+        
+        # Initialize parent and rank arrays for Disjoint Set
+        self.parent = np.array([[(i,j) for j in range(N)] for i in range(N)])
+        self.size = np.ones((N, N), dtype=int)
 
     def copy(self):
         return copy.deepcopy(self)
@@ -30,9 +35,13 @@ class Lattice:
     
     def set_horizontal_bond(self, x, y, value):
         self.bonds_horizontal[x % self.N, y % self.N] = value
+        if value:  # If the bond is set to True, merge the sets
+            self.union(x, y, x, (y+1) % self.N)
     
     def set_vertical_bond(self, x, y, value):
         self.bonds_vertical[x % self.N, y % self.N] = value
+        if value:  # If the bond is set to True, merge the sets
+            self.union(x, y, (x+1) % self.N, y)
         
     def set_all_bonds(self, value):
         self.bonds_horizontal.fill(value)
@@ -42,75 +51,40 @@ class Lattice:
             self.bonds_horizontal = np.random.choice([True, False], (self.N, self.N))
             self.bonds_vertical = np.random.choice([True, False], (self.N, self.N))
 
-    def find_largest_cluster(self):
-        visited = np.zeros((self.N, self.N), dtype=bool)
-        cluster_sizes = []
+    def find(self, x, y):
+        """Find the representative element of the set containing node (x, y)."""
+        parent_x, parent_y = self.parent[x, y]
+        if (x, y) != (parent_x, parent_y):
+            # Path compression
+            self.parent[x, y] = self.find(parent_x, parent_y)
+        return self.parent[x, y]
 
-        def dfs_iterative(x, y):
-            stack = [(x, y)]
-            size = 0
+    def union(self, x1, y1, x2, y2):
+        """Merge the sets containing nodes (x1, y1) and (x2, y2)."""
+        root1 = self.find(x1, y1)
+        root2 = self.find(x2, y2)
 
-            while stack:
-                x, y = stack.pop()
-                if 0 <= x < self.N and 0 <= y < self.N and not visited[x, y]:
-                    visited[x, y] = True
-                    size += 1
-
-                    # Check 4 connected bonds
-                    if self.get_horizontal_bond(x, y) and not visited[(x + 1) % self.N, y]:
-                        stack.append(((x + 1) % self.N, y))
-                    if self.get_horizontal_bond(x - 1, y) and not visited[x - 1, y]:
-                        stack.append((x - 1, y))
-                    if self.get_vertical_bond(x, y) and not visited[x, (y + 1) % self.N]:
-                        stack.append((x, (y + 1) % self.N))
-                    if self.get_vertical_bond(x, y - 1) and not visited[x, y - 1]:
-                        stack.append((x, y - 1))
-
-            return size
-
-        for i in range(self.N):
-            for j in range(self.N):
-                if not visited[i, j]:
-                    cluster_sizes.append(dfs_iterative(i, j))
-
-        return max(cluster_sizes) if cluster_sizes else 0
-
+        if root1.all() != root2.all():
+            if self.size[root1[0],root1[1]] < self.size[root2[0],root2[1]]:
+                self.parent[root1[0],root1[1]] = root2
+                self.size[root2[0],root2[1]] += self.size[root1[0],root1[1]]
+            else:
+                self.parent[root2[0],root2[1]] = root1
+                self.size[root1[0],root1[1]] += self.size[root2[0],root2[1]]
 
     def find_all_clusters(self):
-        #Find all clusters in the lattice
-        visited = np.zeros((self.N, self.N), dtype=bool)
-        clusters = []
-
-        def dfs(i, j, current_cluster):
-            if visited[i, j]:
-                return
-            visited[i, j] = True
-            current_cluster.append((i, j))
-
-            # Check neighbors
-            neighbors = [(i+1, j), (i-1, j), (i, j+1), (i, j-1)]
-            for x, y in neighbors:
-                # Apply periodic boundary conditions
-                x %= self.N
-                y %= self.N
-
-                # If the bond exists and the site hasn't been visited, continue the DFS
-                if ((x == (i+1)%self.N and self.get_horizontal_bond(i, j)) or
-                    (x == (i-1)%self.N and self.get_horizontal_bond(x, y)) or
-                    (y == (j+1)%self.N and self.get_vertical_bond(i, j)) or
-                    (y == (j-1)%self.N and self.get_vertical_bond(x, y))):
-                    dfs(x, y, current_cluster)
-
-        # Iterate over all sites and start a DFS if the site hasn't been visited
+        """Find all clusters in the lattice using the Disjoint Set."""
+        clusters = defaultdict(list)
         for i in range(self.N):
             for j in range(self.N):
-                if not visited[i, j]:
-                    current_cluster = []
-                    dfs(i, j, current_cluster)
-                    if current_cluster:
-                        clusters.append(current_cluster)
+                root = self.find(i, j)
+                clusters[tuple(root)].append((i, j))
+        return list(clusters.values())
 
-        return clusters
+    def find_largest_cluster(self):
+        """Find the size of the largest cluster using the Disjoint Set."""
+        clusters = self.find_all_clusters()
+        return max(len(cluster) for cluster in clusters) if clusters else 0
 
     def rotate_all_vortices(self):
         #Rotate all vortices in the lattice by the same random angle.
@@ -125,6 +99,14 @@ class Lattice:
         for i in range(self.N):
             for j in range(self.N):
                 self.vortices[i, j] = np.dot(rotation_matrix, self.vortices[i, j])
+        
+    def reset_lattice(self):
+        self.bonds_horizontal = np.full((self.N, self.N), False)
+        self.bonds_vertical = np.full((self.N, self.N), False)
+        
+        # Initialize parent and rank arrays for Disjoint Set
+        self.parent = np.array([[(i,j) for j in range(self.N)] for i in range(self.N)])
+        self.size = np.ones((self.N, self.N), dtype=int)
                             
     def visualize_lattice(self):
         fig, ax = plt.subplots(figsize=(10, 10))
@@ -166,21 +148,38 @@ class Lattice:
     def save_to_txt(self, filename):
         with open(filename, 'w') as f:
             # Save vortices
+            f.write("# Vortices\n")
             for i in range(self.N):
                 for j in range(self.N):
                     f.write(f"{self.vortices[i, j][0]} {self.vortices[i, j][1]} ")
                 f.write("\n")
             
             # Save horizontal bonds
+            f.write("# Horizontal Bonds\n")
             for i in range(self.N):
                 for j in range(self.N):
                     f.write(f"{int(self.bonds_horizontal[i, j])} ")
                 f.write("\n")
             
             # Save vertical bonds
+            f.write("# Vertical Bonds\n")
             for i in range(self.N):
                 for j in range(self.N):
                     f.write(f"{int(self.bonds_vertical[i, j])} ")
+                f.write("\n")
+            
+            # Save parents
+            f.write("# Parents\n")
+            for i in range(self.N):
+                for j in range(self.N):
+                    f.write(f"{self.parent[i, j][0]} {self.parent[i, j][1]} ")
+                f.write("\n")
+            
+            # Save sizes
+            f.write("# Sizes\n")
+            for i in range(self.N):
+                for j in range(self.N):
+                    f.write(f"{self.size[i, j]} ")
                 f.write("\n")
 
     def load_from_txt(self, filename):
@@ -188,22 +187,39 @@ class Lattice:
             lines = f.readlines()
             
             # Load vortices
+            idx = lines.index("# Vortices\n") + 1
             for i in range(self.N):
-                values = list(map(float, lines[i].split()))
+                values = list(map(float, lines[idx + i].split()))
                 for j in range(0, len(values), 2):
                     self.vortices[i, j//2] = (values[j], values[j+1])
             
             # Load horizontal bonds
+            idx = lines.index("# Horizontal Bonds\n") + 1
             for i in range(self.N):
-                values = list(map(int, lines[self.N + i].split()))
+                values = list(map(int, lines[idx + i].split()))
                 for j in range(self.N):
                     self.bonds_horizontal[i, j] = bool(values[j])
             
             # Load vertical bonds
+            idx = lines.index("# Vertical Bonds\n") + 1
             for i in range(self.N):
-                values = list(map(int, lines[2*self.N + i].split()))
+                values = list(map(int, lines[idx + i].split()))
                 for j in range(self.N):
                     self.bonds_vertical[i, j] = bool(values[j])
+            
+            # Load parents
+            idx = lines.index("# Parents\n") + 1
+            for i in range(self.N):
+                values = list(map(int, lines[idx + i].split()))
+                for j in range(0, len(values), 2):
+                    self.parent[i, j//2] = (values[j], values[j+1])
+            
+            # Load sizes
+            idx = lines.index("# Sizes\n") + 1
+            for i in range(self.N):
+                values = list(map(int, lines[idx + i].split()))
+                for j in range(self.N):
+                    self.size[i, j] = values[j]
 
 if __name__ == '__main__':
     lattice = Lattice(10)
