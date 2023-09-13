@@ -5,21 +5,30 @@ import matplotlib.pyplot as plt
 import os
 import datetime
 
-def hamiltonian(lattice, J = 1):
-    H = 0.0
-    N = lattice.N
+def PhysicsAnalysis(lattice_state,query=None, J = 1):
+    def hamiltonian(lattice, J = 1):
+        H = 0.0
+        N = lattice.N
 
-    for i in range(N):
-        for j in range(N):
-            # Nearest neighbors: Right and Down due to periodic boundary conditions
-            neighbors = [(i+1, j), (i, j+1)]
-            
-            for (x, y) in neighbors:
-                # Apply periodic boundary conditions
-                x %= N; y %= N
-                # Dot product of spin vectors
-                H -= J * np.dot(lattice.get_vector(i, j), lattice.get_vector(x, y))                
-    return H
+        for i in range(N):
+            for j in range(N):
+                # Nearest neighbors: Right and Down due to periodic boundary conditions
+                neighbors = [(i+1, j), (i, j+1)]
+                
+                for (x, y) in neighbors:
+                    # Apply periodic boundary conditions
+                    x %= N; y %= N
+                    # Dot product of spin vectors
+                    H -= J * np.dot(lattice.get_vector(i, j), lattice.get_vector(x, y))                
+        return H
+    
+    H = hamiltonian(lattice_state, J)
+
+    M = np.linalg.norm(np.mean(lattice_state.vortices, axis=(0, 1)))
+ 
+    if query == 'H': return H
+    elif query == 'M': return M
+    else: return H,M
 
 def calculate_coupling_constants(lattice):
     N = lattice.N
@@ -138,38 +147,86 @@ def Simulation(iterations, system_size):
             for key, value in t_max_state.items():
                 if key != 'lattice_state':
                     f.write(f"{key}: {value}\n")
+                    
         # Save lattice state 
         lattice_filename = f"{directory_name}lattice_size_{system_size}_iteration_{t_max_state['index']}.txt"
         t_max_state['lattice_state'].save_to_txt(lattice_filename)
+    
+        # Physical Analysis
+        #print(PhysicsAnalysis(t_max_state['lattice_state']))
     
         # Apply SpinReset step
         lattice = SpinReset(t_max_state['lattice_state'])
         
         all_results.append(t_max_state.copy())
 
+    # After finishing simulation, extract and save important data
+    K_values = [state['K_value'] for state in all_results]
+    physical_quantities = [PhysicsAnalysis(state['lattice_state']) for state in all_results]
+    H = np.array([item[0] for item in physical_quantities])
+    M = np.array([item[1] for item in physical_quantities])
+    
+    quantities = dict({
+        'K_values':K_values,
+        'H':H,
+        'M':M
+    })
+    
+    quantity_names = ['K_values','H','M']
+    for quantity in quantity_names:
+        quantity_filename = f"{directory_name}{quantity}.txt"
+        with open(quantity_filename, 'w') as f:
+            for item in quantities[quantity]:
+                f.write(str(item)+'\n')
+
     return all_results
 
 def plot(all_results):
     # Extract K values from each t_max_state
     K_values = [state['K_value'] for state in all_results]
+    physical_quantities = [PhysicsAnalysis(state['lattice_state']) for state in all_results]
+    H = np.array([item[0] for item in physical_quantities])
+    M = np.array([item[1] for item in physical_quantities])
+
     print(K_values)
+    print(H,M)
     # Plotting
-    plt.figure(figsize=(10, 6))
-    plt.plot(K_values, marker='o', linestyle='-')
-    plt.xlabel('Iteration')
-    plt.ylabel('K Value')
-    plt.title('K Values for Each Iteration')
-    plt.grid(True)
+    # Create the main plot with K_values
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    ax1.set_xlabel('Iteration')
+    ax1.set_ylabel('K Value', color='blue')
+    ax1.plot(K_values, color='blue', label='K Value', marker='o', linestyle='-')
+    ax1.tick_params(axis='y', labelcolor='blue')
+    
+    # Create a second y-axis for H
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('H (Energy)', color='green')
+    ax2.plot(H, color='green', label='H (Energy)', marker='x', linestyle='--')
+    ax2.tick_params(axis='y', labelcolor='green')
+    
+    # Create a third y-axis for M magnitude
+    ax3 = ax1.twinx()
+    # Offset the third axis to the left
+    ax3.spines['left'].set_position(('outward', 60))
+    ax3.set_ylabel('M (Magnetization Magnitude)', color='red')
+    ax3.plot(M, color='red', label='M (Magnetization Magnitude)', marker='.', linestyle='-.')
+    ax3.tick_params(axis='y', labelcolor='red')
+    
+    # Align grid and show the plot
+    ax1.grid(True)
+    fig.tight_layout()
+    plt.title('K Values, H (Energy), and M (Magnetization Magnitude) for Each Iteration')
     plt.show()
 
 
 if __name__ == "__main__":
     iterations = 10  
-    system_size = 100
+    system_size = 40
     all_results = Simulation(iterations, system_size)
+    
     print("iterations = ", iterations, "system_size = ", system_size)
     print(all_results[-1])
     all_results[-1]['lattice_state'].save_to_txt("./temp.txt")
-    all_results[-1]['lattice_state'].visualize_lattice()
+    #all_results[-1]['lattice_state'].visualize_lattice()
     plot(all_results)
     pass
