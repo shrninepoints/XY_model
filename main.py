@@ -103,9 +103,6 @@ def BondInsert(lattice):
     return largest_change
 
 def SpinReset(lattice):
-
-    # 1. Save the current state
-
     # 1. Get all clusters
     clusters = lattice.find_all_clusters()
 
@@ -118,11 +115,10 @@ def SpinReset(lattice):
     return lattice
 
 def Simulation(iterations, system_size):
-
     # Initialize a random Lattice
     lattice = Lattice(system_size)  # Assuming a size of 10x10 for the lattice, but this can be changed
 
-    # List to save the states of the lattice
+    # List to save the t_max_states of the lattice
     all_results = []
 
     for _ in range(iterations):

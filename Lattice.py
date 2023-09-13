@@ -84,15 +84,7 @@ class Lattice:
         return list(clusters.values())
 
     def find_largest_cluster(self):
-        largest_cluster_size = 0
-
-        for i in range(self.N):
-            for j in range(self.N):
-                root = self.find(i, j)
-                cluster_size = self.size[root[0],root[1]]
-                largest_cluster_size = max(largest_cluster_size, cluster_size)
-
-        return largest_cluster_size
+        return np.max(self.size)
 
     def rotate_all_vortices(self):
         #Rotate all vortices in the lattice by the same random angle.
