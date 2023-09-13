@@ -137,19 +137,19 @@ def Simulation(iterations, system_size):
     directory_name = f"./SimulationResult/size_{system_size}_time_{timestamp}/"
     os.makedirs(directory_name, exist_ok=True)
     
-    for _ in range(iterations):
+    for iteration in range(iterations):
         # Apply BondInsertion step
         t_max_state = BondInsert(lattice)    
         
         # Save metadata to a file
-        metadata_filename = f"{directory_name}metadata_size_{system_size}_iteration_{t_max_state['index']}.txt"
+        metadata_filename = f"{directory_name}metadata_size_{system_size}_iteration_{iteration}.txt"
         with open(metadata_filename, 'w') as f:
             for key, value in t_max_state.items():
                 if key != 'lattice_state':
                     f.write(f"{key}: {value}\n")
                     
         # Save lattice state 
-        lattice_filename = f"{directory_name}lattice_size_{system_size}_iteration_{t_max_state['index']}.txt"
+        lattice_filename = f"{directory_name}lattice_size_{system_size}_iteration_{iteration}.txt"
         t_max_state['lattice_state'].save_to_txt(lattice_filename)
     
         # Physical Analysis
