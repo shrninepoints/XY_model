@@ -2,6 +2,8 @@ from Lattice import Lattice
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import os
+import datetime
 
 def hamiltonian(lattice, J = 1):
     H = 0.0
@@ -92,7 +94,7 @@ def BondInsert(lattice):
             'bond_position': (i, j),
             'direction': direction,
             'largest_cluster_size': largest_cluster_size,
-            'lattice_state': lattice.copy()  # Assuming there's a copy method in the Lattice class
+            'lattice_state': lattice.copy()  
         })
         #lattice.save_to_txt("./temp/temp"+str(index)+".txt")
         index += 1
@@ -120,12 +122,26 @@ def Simulation(iterations, system_size):
 
     # List to save the t_max_states of the lattice
     all_results = []
-
+    
+    # Code for saving the data
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    directory_name = f"./SimulationResult/size_{system_size}_time_{timestamp}/"
+    os.makedirs(directory_name, exist_ok=True)
+    
     for _ in range(iterations):
-        
         # Apply BondInsertion step
-        t_max_state = BondInsert(lattice)
-
+        t_max_state = BondInsert(lattice)    
+        
+        # Save metadata to a file
+        metadata_filename = f"{directory_name}metadata_size_{system_size}_iteration_{t_max_state['index']}.txt"
+        with open(metadata_filename, 'w') as f:
+            for key, value in t_max_state.items():
+                if key != 'lattice_state':
+                    f.write(f"{key}: {value}\n")
+        # Save lattice state 
+        lattice_filename = f"{directory_name}lattice_size_{system_size}_iteration_{t_max_state['index']}.txt"
+        t_max_state['lattice_state'].save_to_txt(lattice_filename)
+    
         # Apply SpinReset step
         lattice = SpinReset(t_max_state['lattice_state'])
         
@@ -149,7 +165,7 @@ def plot(all_results):
 
 if __name__ == "__main__":
     iterations = 10  
-    system_size = 40
+    system_size = 100
     all_results = Simulation(iterations, system_size)
     print("iterations = ", iterations, "system_size = ", system_size)
     print(all_results[-1])
