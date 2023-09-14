@@ -95,7 +95,7 @@ def BondInsert(lattice):
                              
         # Calculate the size of the largest cluster
         largest_cluster_size = lattice.find_largest_cluster()
-
+        
         # Record the current state and results
         results.append({
             'index':index,
@@ -103,15 +103,23 @@ def BondInsert(lattice):
             'bond_position': (i, j),
             'direction': direction,
             'largest_cluster_size': largest_cluster_size,
-            'lattice_state': lattice.copy()  
+            #'lattice_state': lattice.copy()  
         })
         #lattice.save_to_txt("./temp/temp"+str(index)+".txt")
         index += 1
 
-    # Find the step with the largest change in cluster size
+    # After finding t_max, insert all bond again until t_max
     largest_change = max(results[1:], key=lambda x: x['largest_cluster_size'] - results[results.index(x) - 1]['largest_cluster_size'])
+    t_max_index = largest_change['index']
+    lattice.reset_lattice()
+    for K_value, (i, j), direction in sorted_bonds[:t_max_index]:
+        # Insert the bond
+        if direction == 'horizontal':
+            lattice.set_horizontal_bond(i, j, True, union = False)
+        else:
+            lattice.set_vertical_bond(i, j, True, union = False)
 
-    return largest_change
+    return largest_change, lattice
 
 def SpinReset(lattice):
     # 1. Get all clusters
@@ -131,6 +139,7 @@ def Simulation(iterations, system_size):
 
     # List to save the t_max_states of the lattice
     all_results = []
+    all_states = []
     
     # Code for saving the data
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
@@ -139,30 +148,31 @@ def Simulation(iterations, system_size):
     
     for iteration in range(iterations):
         # Apply BondInsertion step
-        t_max_state = BondInsert(lattice)    
+        t_max_info, t_max_state = BondInsert(lattice)    
         
         # Save metadata to a file
         metadata_filename = f"{directory_name}metadata_size_{system_size}_iteration_{iteration}.txt"
         with open(metadata_filename, 'w') as f:
-            for key, value in t_max_state.items():
+            for key, value in t_max_info.items():
                 if key != 'lattice_state':
                     f.write(f"{key}: {value}\n")
                     
         # Save lattice state 
         lattice_filename = f"{directory_name}lattice_size_{system_size}_iteration_{iteration}.txt"
-        t_max_state['lattice_state'].save_to_txt(lattice_filename)
+        t_max_state.save_to_txt(lattice_filename)
     
         # Physical Analysis
         #print(PhysicsAnalysis(t_max_state['lattice_state']))
     
         # Apply SpinReset step
-        lattice = SpinReset(t_max_state['lattice_state'])
+        lattice = SpinReset(t_max_state)
         
-        all_results.append(t_max_state.copy())
+        all_states.append(t_max_state.copy())
+        all_results.append(t_max_info)
 
     # After finishing simulation, extract and save important data
-    K_values = [state['K_value'] for state in all_results]
-    physical_quantities = [PhysicsAnalysis(state['lattice_state']) for state in all_results]
+    K_values = [t_max_info['K_value'] for t_max_info in all_results]
+    physical_quantities = [PhysicsAnalysis(state) for state in all_states]
     H = np.array([item[0] for item in physical_quantities])
     M = np.array([item[1] for item in physical_quantities])
     
@@ -220,13 +230,13 @@ def plot(all_results):
 
 
 if __name__ == "__main__":
-    iterations = 10  
-    system_size = 40
+    iterations = 1
+    system_size = 256
     all_results = Simulation(iterations, system_size)
     
     print("iterations = ", iterations, "system_size = ", system_size)
     print(all_results[-1])
-    all_results[-1]['lattice_state'].save_to_txt("./temp.txt")
+    #all_results[-1]['lattice_state'].save_to_txt("./temp.txt")
     #all_results[-1]['lattice_state'].visualize_lattice()
-    plot(all_results)
+    #plot(all_results)
     pass

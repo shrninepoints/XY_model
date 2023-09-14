@@ -33,16 +33,21 @@ class Lattice:
     def set_vector(self, x, y, theta):
         self.vortices[x % self.N, y % self.N] = (np.cos(theta), np.sin(theta))
     
-    def set_horizontal_bond(self, x, y, value):
+    def set_horizontal_bond(self, x, y, value, union = True):
+        ''' 
+        Value is a bool value to set if the bond is connected.
+        Union controls if we call union upon setting bond. 
+        Set union to false allows for lazy evaluation of parents, 
+        but the data structure is no longer disjoint set.
+        '''
         self.bonds_horizontal[x % self.N, y % self.N] = value
-        if value:  # If the bond is set to True, merge the sets
+        if value and union:  # If the bond is set to True, merge the sets
             self.union(x, y, (x+1) % self.N, y)
 
-    def set_vertical_bond(self, x, y, value):
+    def set_vertical_bond(self, x, y, value, union = True):
         self.bonds_vertical[x % self.N, y % self.N] = value
-        if value:  # If the bond is set to True, merge the sets
-            self.union(x, y, x, (y+1) % self.N)
-            
+        if value and union:  # If the bond is set to True, merge the sets
+            self.union(x, y, x, (y+1) % self.N)            
         
     def set_all_bonds(self, value):
         self.bonds_horizontal.fill(value)
@@ -72,7 +77,41 @@ class Lattice:
                 self.size[root1x,root1y] += self.size[root2x,root2y]    
                 self.parent[root2x,root2y] = (root1x, root1y)          
                 
-                
+    def find_all_clusters_dfs(self):
+        #Find all clusters in the lattice
+        visited = np.zeros((self.N, self.N), dtype=bool)
+        clusters = []
+
+        def dfs(i, j, current_cluster):
+            if visited[i, j]:
+                return
+            visited[i, j] = True
+            current_cluster.append((i, j))
+
+            # Check neighbors
+            neighbors = [(i+1, j), (i-1, j), (i, j+1), (i, j-1)]
+            for x, y in neighbors:
+                # Apply periodic boundary conditions
+                x %= self.N
+                y %= self.N
+
+                # If the bond exists and the site hasn't been visited, continue the DFS
+                if ((x == (i+1)%self.N and self.get_horizontal_bond(i, j)) or
+                    (x == (i-1)%self.N and self.get_horizontal_bond(x, y)) or
+                    (y == (j+1)%self.N and self.get_vertical_bond(i, j)) or
+                    (y == (j-1)%self.N and self.get_vertical_bond(x, y))):
+                    dfs(x, y, current_cluster)
+
+        # Iterate over all sites and start a DFS if the site hasn't been visited
+        for i in range(self.N):
+            for j in range(self.N):
+                if not visited[i, j]:
+                    current_cluster = []
+                    dfs(i, j, current_cluster)
+                    if current_cluster:
+                        clusters.append(current_cluster)
+
+        return clusters              
 
     def find_all_clusters(self):
         """Find all clusters in the lattice using the Disjoint Set."""
@@ -101,6 +140,7 @@ class Lattice:
                 self.vortices[i, j] = np.dot(rotation_matrix, self.vortices[i, j])
         
     def reset_lattice(self):
+        # Reset lattice to initial value. Note this do NOT change vortex values
         self.bonds_horizontal = np.full((self.N, self.N), False)
         self.bonds_vertical = np.full((self.N, self.N), False)
         

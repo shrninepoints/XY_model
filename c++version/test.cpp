@@ -1,10 +1,10 @@
 #include "spin_xy.hpp"
 #include "tips.hpp"
 
-const unsigned L = 64;
-const unsigned avgtrela = 10000;
-const unsigned avgt = 1024 * 100;
-const unsigned avgtout = 1024;
+const unsigned L = 256;
+const unsigned avgtrela = 100;
+const unsigned avgt = 1000;
+const unsigned avgtout = 100;
 
 int main() {
 
