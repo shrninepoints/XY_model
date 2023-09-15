@@ -123,7 +123,12 @@ def BondInsert(lattice):
 
 def SpinReset(lattice):
     # 1. Get all clusters
-    clusters = lattice.find_all_clusters()
+    if np.max(lattice.size) == 1:
+        # Max size is 1, which is impossible, imply the state is generated using lazy union
+        clusters = lattice.find_all_clusters_dfs()
+    else:
+        clusters = lattice.find_all_clusters()
+        
 
     # 2. For each cluster, generate a random number and decide whether to flip the x-component
     for cluster in clusters:
@@ -230,8 +235,8 @@ def plot(all_results):
 
 
 if __name__ == "__main__":
-    iterations = 1
-    system_size = 256
+    iterations = 10
+    system_size = 64
     all_results = Simulation(iterations, system_size)
     
     print("iterations = ", iterations, "system_size = ", system_size)
