@@ -1,4 +1,5 @@
 from Lattice import Lattice
+from IsingLattice import IsingLattice
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -6,22 +7,18 @@ import os
 import datetime
 
 def PhysicsAnalysis(lattice_state,query=None, J = 1):
-    def hamiltonian(lattice, J = 1):
-        H = 0.0
-        N = lattice.N
-
-        for i in range(N):
-            for j in range(N):
-                # Nearest neighbors: Right and Down due to periodic boundary conditions
-                neighbors = [(i+1, j), (i, j+1)]
+    def hamiltonian(lattice: IsingLattice):
+        energy = 0
+        # Interaction energy between neighboring spins
+        for i in range(lattice.N):
+            for j in range(lattice.N):
+                # Periodic boundary conditions
+                right_neighbor = (i+1) % lattice.N
+                down_neighbor = (j+1) % lattice.N
                 
-                for (x, y) in neighbors:
-                    # Apply periodic boundary conditions
-                    x %= N; y %= N
-                    # Dot product of spin vectors
-                    H -= J * np.dot(lattice.get_vector(i, j), lattice.get_vector(x, y))                
-        return H
-    
+                energy -= lattice.J * lattice.vortices[i, j] * (lattice.vortices[right_neighbor, j] + lattice.vortices[i, down_neighbor])        
+        return energy
+
     H = hamiltonian(lattice_state, J)
 
     M = np.linalg.norm(np.mean(lattice_state.vortices, axis=(0, 1)))
