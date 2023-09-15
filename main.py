@@ -8,16 +8,15 @@ import datetime
 
 def PhysicsAnalysis(lattice_state,query=None, J = 1):
     def hamiltonian(lattice: IsingLattice):
-        energy = 0
-        # Interaction energy between neighboring spins
+        H = 0
         for i in range(lattice.N):
             for j in range(lattice.N):
                 # Periodic boundary conditions
                 right_neighbor = (i+1) % lattice.N
                 down_neighbor = (j+1) % lattice.N
                 
-                energy -= lattice.J * lattice.vortices[i, j] * (lattice.vortices[right_neighbor, j] + lattice.vortices[i, down_neighbor])        
-        return energy
+                H -= lattice.J * lattice.vortices[i, j] * (lattice.vortices[right_neighbor, j] + lattice.vortices[i, down_neighbor])        
+        return H
 
     H = hamiltonian(lattice_state, J)
 
