@@ -230,8 +230,8 @@ def plot(all_results):
 
 
 if __name__ == "__main__":
-    iterations = 1
-    system_size = 256
+    iterations = 10
+    system_size = 64
     all_results = Simulation(iterations, system_size)
     
     print("iterations = ", iterations, "system_size = ", system_size)
